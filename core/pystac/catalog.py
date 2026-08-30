@@ -1232,6 +1232,8 @@ class Catalog(STACObject):
         migrate: bool = True,
         preserve_dict: bool = True,
     ) -> C:
+        original_stac_version = d.get("stac_version")
+
         if migrate:
             info = identify_stac_object(d)
             d = migrate_to_latest(d, info)
@@ -1272,6 +1274,8 @@ class Catalog(STACObject):
 
         if root:
             cat.set_root(root)
+
+        cat.original_stac_version = original_stac_version
 
         return cat
 

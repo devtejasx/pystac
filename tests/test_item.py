@@ -683,3 +683,30 @@ def test_clone_extra_fields(item: Item) -> None:
     item.extra_fields["foo"] = "bar"
     cloned = item.clone()
     assert cloned.extra_fields["foo"] == "bar"
+
+
+def test_original_stac_version_is_recorded(sample_item_dict: dict[str, Any]) -> None:
+    """from_dict migrates the version away; the original stays available.
+
+    https://github.com/stac-utils/pystac/issues/1562
+    """
+    sample_item_dict["stac_version"] = "1.0.0"
+
+    item = Item.from_dict(sample_item_dict)
+    assert item.original_stac_version == "1.0.0"
+    # Migration still happens, and to_dict still writes the current version.
+    assert item.to_dict()["stac_version"] == pystac.get_stac_version()
+
+    not_migrated = Item.from_dict(sample_item_dict, migrate=False)
+    assert not_migrated.original_stac_version == "1.0.0"
+
+
+def test_original_stac_version_is_none_when_constructed() -> None:
+    item = Item(
+        id="an-id",
+        geometry=None,
+        bbox=None,
+        datetime=str_to_datetime("2020-01-01T00:00:00Z"),
+        properties={},
+    )
+    assert item.original_stac_version is None

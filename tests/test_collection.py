@@ -842,3 +842,15 @@ def test_from_dict_missing_extent(collection: Collection) -> None:
 
     assert c.extent.spatial.to_dict()["bbox"] == [[-90, -180, 90, 180]]
     assert c.extent.temporal.to_dict()["interval"] == [[None, None]]
+
+
+def test_original_stac_version_is_recorded() -> None:
+    """https://github.com/stac-utils/pystac/issues/1562"""
+    path = TestCases.get_path("data-files/collections/multi-extent.json")
+    with open(path) as f:
+        collection_dict = json.load(f)
+    collection_dict["stac_version"] = "1.0.0"
+
+    collection = Collection.from_dict(collection_dict)
+    assert collection.original_stac_version == "1.0.0"
+    assert collection.to_dict()["stac_version"] == pystac.get_stac_version()

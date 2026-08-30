@@ -426,6 +426,8 @@ class Item(STACObject, Assets):
     ) -> T:
         import warnings
 
+        original_stac_version = d.get("stac_version")
+
         if preserve_dict:
             d = deepcopy(d)
 
@@ -483,6 +485,8 @@ class Item(STACObject, Assets):
         message = pystac.EXTENSION_HOOKS.get_deprecation_message(item)
         if message is not None:
             warnings.warn(message, DeprecatedWarning)
+
+        item.original_stac_version = original_stac_version
 
         return item
 

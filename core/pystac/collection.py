@@ -638,6 +638,8 @@ class Collection(Catalog, Assets):
     ) -> C:
         import warnings
 
+        original_stac_version = d.get("stac_version")
+
         if migrate:
             info = identify_stac_object(d)
             d = migrate_to_latest(d, info)
@@ -711,6 +713,8 @@ class Collection(Catalog, Assets):
         message = pystac.EXTENSION_HOOKS.get_deprecation_message(collection)
         if message is not None:
             warnings.warn(message, DeprecatedWarning)
+
+        collection.original_stac_version = original_stac_version
 
         return collection
 

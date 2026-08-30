@@ -49,6 +49,17 @@ class STACObject(ABC):
 
     STAC_OBJECT_TYPE: STACObjectType
 
+    original_stac_version: str | None = None
+    """The ``stac_version`` of the document this object was read from.
+
+    ``from_dict`` migrates a document to
+    :attr:`~pystac.version.STACVersion.DEFAULT_STAC_VERSION`, and
+    :meth:`to_dict` writes that version out, so the version the document
+    actually carried is otherwise lost. It is recorded here for inspection.
+
+    ``None`` for an object that was constructed directly rather than read.
+    """
+
     _allow_parent_to_override_href: bool = True
     """Private attribute for whether parent objects should override on normalization"""
 
