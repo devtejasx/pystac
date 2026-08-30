@@ -17,6 +17,7 @@ from pystac.serialization import (
 )
 from pystac.stac_object import STACObject
 from pystac.utils import (
+    _replace_tuples,
     datetime_to_str,
     is_absolute_href,
     make_absolute_href,
@@ -133,8 +134,9 @@ class Item(STACObject, Assets):
         super().__init__(stac_extensions or [])
 
         self.id = id
-        self.geometry = geometry
-        self.bbox = bbox
+        # shapely hands out tuples, which are not JSON Schema arrays
+        self.geometry = _replace_tuples(geometry)
+        self.bbox = _replace_tuples(bbox)
         self.properties = properties
         if extra_fields is None:
             self.extra_fields = {}

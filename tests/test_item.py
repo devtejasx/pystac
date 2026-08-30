@@ -683,3 +683,45 @@ def test_clone_extra_fields(item: Item) -> None:
     item.extra_fields["foo"] = "bar"
     cloned = item.clone()
     assert cloned.extra_fields["foo"] == "bar"
+
+
+@pytest.mark.vcr()
+def test_tuple_coordinates_are_normalized_to_lists() -> None:
+    """Shapely hands out tuples; JSON Schema only accepts arrays.
+
+    https://github.com/stac-utils/pystac/issues/1706
+    """
+    # what shapely.geometry.mapping / Geometry.bounds return
+    geometry = {
+        "type": "Polygon",
+        "coordinates": (
+            (
+                (-95.780872, 29.517294),
+                (-95.783782, 29.623358),
+                (-96.041791, 29.617689),
+                (-96.038613, 29.511649),
+                (-95.780872, 29.517294),
+            ),
+        ),
+    }
+    bbox = (-96.041791, 29.511649, -95.780872, 29.623358)
+
+    item = Item(
+        id="tuple-coords",
+        geometry=geometry,  # type: ignore[arg-type]
+        bbox=bbox,  # type: ignore[arg-type]
+        datetime=str_to_datetime("2020-01-01T00:00:00Z"),
+        properties={},
+    )
+
+    assert item.geometry is not None
+    assert isinstance(item.geometry["coordinates"], list)
+    assert isinstance(item.geometry["coordinates"][0], list)
+    assert isinstance(item.geometry["coordinates"][0][0], list)
+    assert isinstance(item.bbox, list)
+
+    d = item.to_dict()
+    assert d["geometry"] == json.loads(json.dumps(geometry))
+    assert d["bbox"] == list(bbox)
+
+    item.validate()

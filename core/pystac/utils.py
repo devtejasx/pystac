@@ -458,6 +458,30 @@ def now_to_rfc3339_str() -> str:
     return datetime_to_str(now_in_utc())
 
 
+def _replace_tuples(value: Any) -> Any:
+    """Recursively replace tuples with lists.
+
+    ``shapely.geometry.mapping`` and ``shapely.Geometry.bounds`` produce
+    tuples, which are indistinguishable from lists once serialized to JSON but
+    are not of JSON Schema type ``array``.  Storing lists instead keeps
+    validation and equality comparisons working on such geometries.
+
+    Args:
+        value: Any value, usually a GeoJSON geometry or a bbox.
+
+    Returns:
+        The value, with every tuple in it replaced by a list.
+
+    """
+    if isinstance(value, tuple):
+        return [_replace_tuples(v) for v in value]
+    if isinstance(value, list):
+        return [_replace_tuples(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _replace_tuples(v) for k, v in value.items()}
+    return value
+
+
 def geometry_to_bbox(geometry: dict[str, Any]) -> list[float]:
     """Extract the bounding box from a geojson geometry
 
