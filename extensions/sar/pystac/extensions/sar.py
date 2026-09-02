@@ -70,6 +70,26 @@ class ObservationDirection(StringEnum):
     RIGHT = "right"
 
 
+class SarRoleType(StringEnum):
+    """Asset roles that the SAR extension adds to the common roles in
+    :class:`pystac.RoleType`.
+
+    See :stac-ext:`"Best Practices" <sar#best-practices>` in the SAR extension.
+    """
+
+    LOCAL_INCIDENCE_ANGLE = "local-incidence-angle"
+    ELLIPSOID_INCIDENCE_ANGLE = "ellipsoid-incidence-angle"
+    NOISE_POWER = "noise-power"
+    AMPLITUDE = "amplitude"
+    MAGNITUDE = "magnitude"
+    SIGMA0 = "sigma0"
+    BETA0 = "beta0"
+    GAMMA0 = "gamma0"
+    DATE_OFFSET = "date-offset"
+    COVMAT = "covmat"
+    PRD = "prd"
+
+
 class SarExtension(
     Generic[T],
     PropertiesExtension,

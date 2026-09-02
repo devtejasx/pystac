@@ -15,6 +15,7 @@ from pystac.extensions.sar import (
     ObservationDirection,
     Polarization,
     SarExtension,
+    SarRoleType,
 )
 from pystac.summaries import RangeSummary
 
@@ -387,3 +388,27 @@ def test_summaries_observation_direction(collection: pystac.Collection) -> None:
     summaries_dict = collection.to_dict()["summaries"]
 
     assert summaries_dict["sar:observation_direction"] == observation_direction_list
+
+
+def test_role_type_covers_the_extension_best_practices() -> None:
+    assert {role.value for role in SarRoleType} == {
+        "local-incidence-angle",
+        "ellipsoid-incidence-angle",
+        "noise-power",
+        "amplitude",
+        "magnitude",
+        "sigma0",
+        "beta0",
+        "gamma0",
+        "date-offset",
+        "covmat",
+        "prd",
+    }
+
+
+def test_role_type_is_usable_as_an_asset_role() -> None:
+    asset = pystac.Asset(
+        href="https://example.com/sigma0.tif", roles=[SarRoleType.SIGMA0]
+    )
+
+    assert asset.to_dict()["roles"] == ["sigma0"]

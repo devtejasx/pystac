@@ -21,6 +21,7 @@ __all__ = [
     "DeprecatedWarning",
     "MediaType",
     "RelType",
+    "RoleType",
     "StacIO",
     "STACObject",
     "STACObjectType",
@@ -70,6 +71,7 @@ from pystac.version import (
 )
 from pystac.media_type import MediaType
 from pystac.rel_type import RelType
+from pystac.role import RoleType
 from pystac.stac_io import StacIO
 from pystac.stac_object import STACObject, STACObjectType
 from pystac.link import Link, HIERARCHICAL_LINKS

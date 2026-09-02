@@ -7,7 +7,13 @@ from pytest_pystac.plugin import assert_to_from_dict
 import pystac
 from pystac import ExtensionTypeError, Item
 from pystac.errors import ExtensionNotImplemented, RequiredPropertyMissing
-from pystac.extensions.eo import PREFIX, SNOW_COVER_PROP, Band, EOExtension
+from pystac.extensions.eo import (
+    PREFIX,
+    SNOW_COVER_PROP,
+    Band,
+    EOExtension,
+    EORoleType,
+)
 from pystac.extensions.projection import ProjectionExtension
 from pystac.summaries import RangeSummary
 from pystac.utils import get_opt
@@ -524,3 +530,22 @@ def test_unnecessary_migrations_not_performed(ext_item: Item) -> None:
     assert len(item.assets) == len(migrated_item.assets)
     for key, value in item.assets.items():
         assert value.to_dict() == migrated_item.assets[key].to_dict()
+
+
+def test_role_type_covers_the_extension_best_practices() -> None:
+    assert {role.value for role in EORoleType} == {
+        "reflectance",
+        "temperature",
+        "saturation",
+        "cloud",
+        "cloud-shadow",
+    }
+
+
+def test_role_type_is_usable_as_an_asset_role() -> None:
+    asset = pystac.Asset(
+        href="https://example.com/clouds.tif",
+        roles=[pystac.RoleType.METADATA, EORoleType.CLOUD],
+    )
+
+    assert asset.to_dict()["roles"] == ["metadata", "cloud"]

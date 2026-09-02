@@ -165,6 +165,13 @@ RelType
    :members:
    :undoc-members:
 
+RoleType
+--------
+
+.. autoclass:: pystac.RoleType
+   :members:
+   :undoc-members:
+
 StacIO
 ------
 

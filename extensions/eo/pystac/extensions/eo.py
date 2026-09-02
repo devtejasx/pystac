@@ -21,7 +21,7 @@ from pystac.extensions.base import (
 from pystac.extensions.hooks import ExtensionHooks
 from pystac.serialization.identify import STACJSONDescription, STACVersionID
 from pystac.summaries import RangeSummary
-from pystac.utils import get_required, map_opt
+from pystac.utils import StringEnum, get_required, map_opt
 
 #: Generalized version of :class:`~pystac.Item`, :class:`~pystac.Asset`,
 #: pr :class:`~pystac.ItemAssetDefinition`
@@ -46,6 +46,20 @@ def validated_percentage(v: float | None) -> float | None:
     if v is not None and not 0 <= v <= 100:
         raise ValueError(f"Invalid percentage: {v} must be between 0 and 100")
     return v
+
+
+class EORoleType(StringEnum):
+    """Asset roles that the EO extension adds to the common roles in
+    :class:`pystac.RoleType`.
+
+    See :stac-ext:`"Best Practices" <eo#best-practices>` in the EO extension.
+    """
+
+    REFLECTANCE = "reflectance"
+    TEMPERATURE = "temperature"
+    SATURATION = "saturation"
+    CLOUD = "cloud"
+    CLOUD_SHADOW = "cloud-shadow"
 
 
 class Band:
