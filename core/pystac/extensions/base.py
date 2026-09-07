@@ -45,6 +45,24 @@ class SummariesExtension:
 P = TypeVar("P")
 
 
+def _to_serializable(value: Any) -> Any:
+    """Recursively replaces every object that knows how to serialize itself with
+    its dictionary form.
+
+    An object is serialized with its ``to_dict`` method, and the result is
+    traversed in turn, so that objects nested inside lists, tuples and
+    dictionaries are converted as well.
+    """
+    to_dict = getattr(value, "to_dict", None)
+    if callable(to_dict):
+        return _to_serializable(to_dict())
+    if isinstance(value, dict):
+        return {k: _to_serializable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_to_serializable(v) for v in value]
+    return value
+
+
 class PropertiesExtension(ABC):
     """Abstract base class for extending the properties of an :class:`~pystac.Item`
     to include properties defined by a STAC Extension.
@@ -86,12 +104,8 @@ class PropertiesExtension(ABC):
     ) -> None:
         if v is None and pop_if_none:
             self.properties.pop(prop_name, None)
-        elif isinstance(v, list):
-            self.properties[prop_name] = [
-                x.to_dict() if hasattr(x, "to_dict") else x for x in v
-            ]
         else:
-            self.properties[prop_name] = v
+            self.properties[prop_name] = _to_serializable(v)
 
 
 class ExtensionManagementMixin(Generic[S], ABC):
