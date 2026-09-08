@@ -154,6 +154,29 @@ class Asset:
             extra_fields=deepcopy(self.extra_fields),
         )
 
+    def __deepcopy__(self, memo: dict[int, Any]) -> Asset:
+        """Deep copies this asset without deep copying its owner.
+
+        An asset's :attr:`~pystac.Asset.owner` holds every asset the item or
+        collection has, so following it would copy all of them once per asset.
+        The owner is a back-reference, not data the asset owns, so it is carried
+        over as a reference instead.
+
+        When the owner is itself part of the copy -- ``deepcopy(item)`` -- its
+        new object is already in ``memo`` by the time its assets are copied, so
+        the copied assets attach to the copied owner exactly as before.
+        """
+        cls = self.__class__
+        new = cls.__new__(cls)
+        memo[id(self)] = new
+        for key, value in self.__dict__.items():
+            if key == "owner":
+                new.owner = None if value is None else memo.get(id(value), value)
+            else:
+                setattr(new, key, deepcopy(value, memo))
+
+        return new
+
     def has_role(self, role: str) -> bool:
         """Check if a role exists in the Asset role list.
 

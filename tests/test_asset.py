@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -211,3 +212,57 @@ def test_asset_get_absolute_href_windows(
         asset_href.format(tmpdir=tmpdir),
         expected_href.format(tmpdir=tmpdir),
     )
+
+
+def test_deepcopy_asset_keeps_its_owner(sample_item: pystac.Item) -> None:
+    """https://github.com/stac-utils/pystac/issues/1799"""
+    asset = sample_item.assets["analytic"]
+
+    copied = deepcopy(asset)
+
+    assert copied is not asset
+    assert copied.owner is sample_item
+
+
+def test_deepcopy_asset_copies_its_own_data(sample_item: pystac.Item) -> None:
+    asset = sample_item.assets["analytic"]
+    asset.extra_fields["nested"] = {"key": "value"}
+
+    copied = deepcopy(asset)
+    copied.extra_fields["nested"]["key"] = "changed"
+    copied.href = "changed.tif"
+
+    assert asset.extra_fields["nested"]["key"] == "value"
+    assert asset.href != "changed.tif"
+
+
+def test_deepcopy_item_rewires_assets_to_the_copy(sample_item: pystac.Item) -> None:
+    copied = deepcopy(sample_item)
+
+    assert copied is not sample_item
+    for key, asset in copied.assets.items():
+        assert asset is not sample_item.assets[key]
+        assert asset.owner is copied
+
+
+def test_get_assets_does_not_copy_the_owner(sample_item: pystac.Item) -> None:
+    """https://github.com/stac-utils/pystac/issues/1799
+
+    ``get_assets`` hands out copies so callers cannot mutate the stored assets.
+    Following ``owner`` while doing so copied the item, and every other asset on
+    it, once per asset.
+    """
+    assets = sample_item.get_assets()
+
+    assert assets
+    for key, asset in assets.items():
+        assert asset is not sample_item.assets[key]
+        assert asset.owner is sample_item
+
+
+def test_get_assets_still_isolates_the_caller(sample_item: pystac.Item) -> None:
+    key, asset = next(iter(sample_item.get_assets().items()))
+
+    asset.extra_fields["added-by-caller"] = True
+
+    assert "added-by-caller" not in sample_item.assets[key].extra_fields
