@@ -421,14 +421,15 @@ if HAS_URLLIB3:
     from typing import cast
 
     from urllib3 import PoolManager
-    from urllib3.util import Retry
+    from urllib3.util import Retry, Timeout
 
     class RetryStacIO(DefaultStacIO):
         """A customized StacIO that retries requests, using
         :py:class:`urllib3.util.retry.Retry`.
 
         The headers are passed to :py:class:`DefaultStacIO`. If retry is not
-        provided, a default retry is used.
+        provided, a default retry is used. If timeout is not provided, urllib3's
+        default timeout is used.
 
         To use this class, you'll need to install PySTAC with urllib3:
 
@@ -442,12 +443,19 @@ if HAS_URLLIB3:
             self,
             headers: dict[str, str] | None = None,
             retry: Retry | None = None,
+            timeout: Timeout | float | None = None,
         ):
             super().__init__(headers)
 
             self.retry = retry or Retry()
             """The :py:class:`urllib3.util.retry.Retry` to use with all reading network
             requests."""
+
+            self.timeout = timeout
+            """The timeout to use with all reading network requests, either a
+            :py:class:`urllib3.util.Timeout` for fine-grained control over the
+            connect and read timeouts, or a number of seconds to use as the
+            total timeout. If ``None``, urllib3's default timeout is used."""
 
         def read_text_from_href(self, href: str) -> str:
             """Reads file as a UTF-8 string, with retry support.
@@ -470,6 +478,11 @@ if HAS_URLLIB3:
                             **self.headers,
                         },
                         retries=self.retry,  # type: ignore
+                        timeout=(
+                            Timeout.DEFAULT_TIMEOUT
+                            if self.timeout is None
+                            else self.timeout
+                        ),
                     )
                     if response.status >= 400:
                         raise HTTPError(

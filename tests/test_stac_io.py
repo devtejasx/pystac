@@ -3,6 +3,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 import pytest
 from pytest import MonkeyPatch
@@ -212,6 +213,71 @@ def test_retry_stac_io_raises_on_429(monkeypatch: MonkeyPatch) -> None:
     stac_io = RetryStacIO()
     with pytest.raises(Exception):
         stac_io.read_text("http://localhost:5000")
+
+
+def test_retry_stac_io_default_timeout(monkeypatch: MonkeyPatch) -> None:
+    # https://github.com/stac-utils/pystac/issues/1515
+    pytest.importorskip("urllib3")
+    from urllib3 import PoolManager
+    from urllib3.util import Timeout
+
+    from pystac.stac_io import RetryStacIO
+
+    stac_io = RetryStacIO()
+    assert stac_io.timeout is None
+
+    kwargs = _capture_request_kwargs(monkeypatch, PoolManager, stac_io)
+    assert kwargs["timeout"] is Timeout.DEFAULT_TIMEOUT
+
+
+def test_retry_stac_io_timeout(monkeypatch: MonkeyPatch) -> None:
+    # https://github.com/stac-utils/pystac/issues/1515
+    pytest.importorskip("urllib3")
+    from urllib3 import PoolManager
+    from urllib3.util import Timeout
+
+    from pystac.stac_io import RetryStacIO
+
+    timeout = Timeout(connect=1.0, read=2.0)
+    stac_io = RetryStacIO(timeout=timeout)
+
+    kwargs = _capture_request_kwargs(monkeypatch, PoolManager, stac_io)
+    assert kwargs["timeout"] is timeout
+
+
+def test_retry_stac_io_timeout_as_number(monkeypatch: MonkeyPatch) -> None:
+    # https://github.com/stac-utils/pystac/issues/1515
+    pytest.importorskip("urllib3")
+    from urllib3 import PoolManager
+
+    from pystac.stac_io import RetryStacIO
+
+    stac_io = RetryStacIO(timeout=4.2)
+
+    kwargs = _capture_request_kwargs(monkeypatch, PoolManager, stac_io)
+    assert kwargs["timeout"] == 4.2
+
+
+def _capture_request_kwargs(
+    monkeypatch: MonkeyPatch, pool_manager: type, stac_io: Any
+) -> dict[str, Any]:
+    """Reads a URL through ``stac_io`` and returns the kwargs urllib3 was called
+    with."""
+    captured: dict[str, Any] = {}
+
+    class FakeResponse:
+        status = 200
+        reason = "OK"
+        headers: dict[str, str] = {}
+        data = b"{}"
+
+    def fake_request(self: Any, *args: Any, **kwargs: Any) -> FakeResponse:
+        captured.update(kwargs)
+        return FakeResponse()
+
+    monkeypatch.setattr(pool_manager, "request", fake_request)
+    _ = stac_io.read_text("http://localhost:5000")
+    return captured
 
 
 def test_save_http_href_errors(tmp_path: Path) -> None:
