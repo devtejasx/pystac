@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import warnings
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
@@ -259,7 +260,9 @@ class STACObject(ABC):
 
             validator = DEFAULT_JSON_SCHEMA_VALIDATOR
 
-        data = self.to_dict()
+        # Round-trip through JSON so that values which serialize to arrays, such as
+        # the tuple coordinates of a shapely geometry mapping, validate as arrays.
+        data = json.loads(json.dumps(self.to_dict()))
         validator.validate_core(self.type, self.stac_version, data)
 
         if validate_extensions and self.stac_extensions:
