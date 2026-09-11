@@ -27,3 +27,7 @@ Add any other context about the problem here.
 
 - [ ] OS, Python version, PySTAC version are included.
 - [ ] Existing issues were reviewed to prevent duplicate submission.
+
+**AI tool usage**
+
+- [ ] AI tools (e.g. Copilot or an LLM) supported writing this issue. Use of AI tools must be indicated, see the [stac-utils AI tool policy](https://stac-utils.github.io/ai-contribution-policy/).

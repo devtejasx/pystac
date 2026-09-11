@@ -5,6 +5,16 @@ A list of issues and ongoing work is available on the PySTAC `issues page
 <https://github.com/stac-utils/pystac/issues>`_. If you want to contribute code, the best
 way is to coordinate with the core developers via an issue or pull request conversation.
 
+AI tool use
+^^^^^^^^^^^
+
+PySTAC follows the `stac-utils AI/LLM tool policy
+<https://stac-utils.github.io/ai-contribution-policy/>`_. You can use AI tools to help
+with a contribution, but there must be a human in the loop: review everything a tool
+generates before asking anyone else to review it, and be ready to answer questions about
+it. If a pull request or issue contains a substantial amount of tool-generated content,
+say so; the pull request and issue templates have a checkbox for this.
+
 Development installation
 ^^^^^^^^^^^^^^^^^^^^^^^^
 Fork PySTAC into your GitHub account. Then, clone the repo and install it locally with

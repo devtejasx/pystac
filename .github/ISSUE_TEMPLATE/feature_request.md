@@ -12,3 +12,7 @@ Include your PySTAC version in case a similar feature already exists in a newer 
 
 **Additional context**
 Add any other context or screenshots about the feature request here.
+
+**AI tool usage**
+
+- [ ] AI tools (e.g. Copilot or an LLM) supported writing this issue. Use of AI tools must be indicated, see the [stac-utils AI tool policy](https://stac-utils.github.io/ai-contribution-policy/).
