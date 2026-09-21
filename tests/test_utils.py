@@ -73,6 +73,16 @@ from tests.utils import TestCases, path_includes_drive_letter
             "http://stacspec.org/a/b/catalog.json",
             "./.dotfile",
         ),
+        (
+            "http://stacspec.org/a/b/c/data.tif?sig=abc&se=2030-01-01",
+            "http://stacspec.org/a/b/catalog.json",
+            "./c/data.tif?sig=abc&se=2030-01-01",
+        ),
+        (
+            "http://stacspec.org/a/data.json#/properties",
+            "http://stacspec.org/a/b/catalog.json",
+            "../data.json#/properties",
+        ),
         # relative href under windows
         (
             "C:\\a\\b\\c\\d\\catalog.json",
@@ -96,6 +106,20 @@ from tests.utils import TestCases, path_includes_drive_letter
 def test_make_relative_href(source_href: str, start_href: str, expected: str) -> None:
     actual = make_relative_href(source_href, start_href)
     assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "source_href",
+    (
+        "https://stacspec.org/a/b/c/data.tif?sig=abc&se=2030-01-01",
+        "https://stacspec.org/a/data.json#/properties",
+        "https://stacspec.org/a/b/item.json?x=1#frag",
+    ),
+)
+def test_relative_href_round_trip_keeps_query_and_fragment(source_href: str) -> None:
+    start_href = "https://stacspec.org/a/b/catalog.json"
+    relative = make_relative_href(source_href, start_href)
+    assert make_absolute_href(relative, start_href) == source_href
 
 
 @pytest.mark.parametrize(

@@ -205,7 +205,18 @@ def _make_relative_href_url(
     if rel_url != "./" and not rel_url.startswith("../"):
         rel_url = "./" + rel_url
 
-    return rel_url
+    # Keep the query and fragment, as _make_absolute_href_url does, so that
+    # e.g. a signed URL survives a round trip through a relative href
+    return urlunparse(
+        (
+            "",
+            "",
+            rel_url,
+            parsed_source.params,
+            parsed_source.query,
+            parsed_source.fragment,
+        )
+    )
 
 
 def _make_relative_href_path(
