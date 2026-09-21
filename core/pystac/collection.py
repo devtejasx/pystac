@@ -385,20 +385,14 @@ class Extent:
         """
         from dateutil import tz
 
-        bounds_values: list[list[float]] = [
-            [float("inf")],
-            [float("inf")],
-            [float("-inf")],
-            [float("-inf")],
-        ]
+        bboxes: list[list[float]] = []
         datetimes: list[datetime] = []
         starts: list[datetime] = []
         ends: list[datetime] = []
 
         for item in items:
             if item.bbox is not None:
-                for i in range(0, 4):
-                    bounds_values[i].append(item.bbox[i])
+                bboxes.append(item.bbox)
             if item.datetime is not None:
                 datetimes.append(item.datetime)
             if item.common_metadata.start_datetime is not None:
@@ -425,19 +419,36 @@ class Extent:
                 ]
             )
 
-        spatial = SpatialExtent(
-            [
-                [
-                    min(bounds_values[0]),
-                    min(bounds_values[1]),
-                    max(bounds_values[2]),
-                    max(bounds_values[3]),
-                ]
-            ]
-        )
+        spatial = SpatialExtent([_union_bbox(bboxes)])
         temporal = TemporalExtent([[start_timestamp, end_timestamp]])
 
         return Extent(spatial=spatial, temporal=temporal, extra_fields=extra_fields)
+
+
+def _union_bbox(bboxes: list[list[float]]) -> list[float]:
+    """Return the bbox that covers all of ``bboxes``.
+
+    A 3D bbox is ``[xmin, ymin, zmin, xmax, ymax, zmax]``, so its x/y maxima are
+    at indices 3 and 4, not 2 and 3. The result is 3D only if every bbox is.
+    """
+    if bboxes and all(len(bbox) == 6 for bbox in bboxes):
+        mins = [min(bbox[i] for bbox in bboxes) for i in range(3)]
+        maxs = [max(bbox[i + 3] for bbox in bboxes) for i in range(3)]
+        return mins + maxs
+
+    xmin, ymin, xmax, ymax = (
+        float("inf"),
+        float("inf"),
+        float("-inf"),
+        float("-inf"),
+    )
+    for bbox in bboxes:
+        half = len(bbox) // 2
+        xmin = min(xmin, bbox[0])
+        ymin = min(ymin, bbox[1])
+        xmax = max(xmax, bbox[half])
+        ymax = max(ymax, bbox[half + 1])
+    return [xmin, ymin, xmax, ymax]
 
 
 class Collection(Catalog, Assets):

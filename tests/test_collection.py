@@ -497,6 +497,38 @@ def test_extent_from_items() -> None:
     assert interval[1] == datetime(2001, 1, 1, 12, 0, 0, 0, tzinfo=tz.UTC)
 
 
+@pytest.mark.parametrize(
+    "bboxes,expected",
+    [
+        # 3D bboxes are [xmin, ymin, zmin, xmax, ymax, zmax]
+        (
+            [[0, 0, 1, 1, 1, 10], [2, 2, -5, 3, 3, 5]],
+            [0, 0, -5, 3, 3, 10],
+        ),
+        # mixing 2D and 3D bboxes gives a 2D extent over x and y
+        (
+            [[0, 0, 1, 1, 1, 10], [2, 2, 3, 3]],
+            [0, 0, 3, 3],
+        ),
+    ],
+)
+def test_extent_from_items_3d_bbox(
+    bboxes: list[list[float]], expected: list[float]
+) -> None:
+    items = [
+        Item(
+            id=f"item-{i}",
+            geometry=ARBITRARY_GEOM,
+            bbox=bbox,
+            datetime=datetime(2000, 1, 1, tzinfo=tz.UTC),
+            properties={},
+        )
+        for i, bbox in enumerate(bboxes)
+    ]
+    extent = Extent.from_items(items)
+    assert extent.spatial.bboxes == [expected]
+
+
 def test_extent_to_from_dict() -> None:
     spatial_dict = {
         "bbox": [
