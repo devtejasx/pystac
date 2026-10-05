@@ -2,7 +2,9 @@ import json
 import logging
 import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from typing import Any
+from urllib.parse import urlparse
 
 import pystac
 import pystac.utils
@@ -142,6 +144,15 @@ class JsonSchemaSTACValidator(STACValidator):
             the validator will retrieve the JSON schemas for validation.
             Defaults to an instance of
             :class:`~pystac.validation.schema_uri_map.DefaultSchemaUriMap`
+        allowed_extension_hosts : Optional host names that extension schemas may
+            be loaded from, such as ``["stac-extensions.github.io"]``. When set,
+            an extension in ``stac_extensions`` whose schema is not already
+            cached must be an ``http`` or ``https`` URL on one of these hosts
+            (compared case-insensitively, without subdomains), or validation
+            fails with :class:`~pystac.errors.STACValidationError` before
+            anything is fetched or read. This also rules out relative and local
+            paths. Defaults to ``None``, which allows any extension URI, as the
+            STAC specification does.
 
     Note:
     This class requires the ``jsonschema`` library to be installed.
@@ -150,7 +161,11 @@ class JsonSchemaSTACValidator(STACValidator):
     schema_uri_map: SchemaUriMap
     schema_cache: dict[str, dict[str, Any]]
 
-    def __init__(self, schema_uri_map: SchemaUriMap | None = None) -> None:
+    def __init__(
+        self,
+        schema_uri_map: SchemaUriMap | None = None,
+        allowed_extension_hosts: Iterable[str] | None = None,
+    ) -> None:
         if not HAS_JSONSCHEMA:
             raise ImportError("Cannot instantiate, requires jsonschema package")
 
@@ -159,7 +174,28 @@ class JsonSchemaSTACValidator(STACValidator):
         else:
             self.schema_uri_map = DefaultSchemaUriMap()
 
+        self.allowed_extension_hosts = (
+            None
+            if allowed_extension_hosts is None
+            else frozenset(host.lower() for host in allowed_extension_hosts)
+        )
+
         self.schema_cache = get_local_schema_cache()
+
+    def _check_extension_host(self, schema_uri: str) -> None:
+        """Raises STACValidationError if an allow-list is set and ``schema_uri``
+        would have to be loaded from somewhere outside it."""
+        if self.allowed_extension_hosts is None or schema_uri in self.schema_cache:
+            return
+        parsed = urlparse(schema_uri)
+        host = (parsed.hostname or "").lower()
+        if parsed.scheme in ("http", "https") and host in self.allowed_extension_hosts:
+            return
+        allowed = ", ".join(sorted(self.allowed_extension_hosts)) or "none"
+        raise STACValidationError(
+            f"Extension schema {schema_uri!r} is not on an allowed host "
+            f"(allowed: {allowed}); refusing to load it."
+        )
 
     def _get_schema(self, schema_uri: str) -> dict[str, Any]:
         if schema_uri not in self.schema_cache:
@@ -299,6 +335,7 @@ class JsonSchemaSTACValidator(STACValidator):
 
         schema_uri = pystac.utils.make_absolute_href(schema_uri, href)
 
+        self._check_extension_host(schema_uri)
         self._validate_from_uri(stac_dict, stac_object_type, schema_uri, href)
 
         return schema_uri

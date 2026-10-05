@@ -250,6 +250,70 @@ def test_item_latest_version_uses_local(item: pystac.Item) -> None:
     assert item.validate()
 
 
+@pytest.mark.block_network
+@pytest.mark.parametrize(
+    "extension",
+    [
+        "https://evil.example.com/schema.json",
+        "https://stac-extensions.github.io.evil.example.com/schema.json",
+        "ftp://stac-extensions.github.io/eo/v1.1.0/schema.json",
+        "../../../etc/passwd",
+        "/etc/passwd",
+    ],
+)
+def test_allowed_extension_hosts_refuses_other_sources(
+    item: pystac.Item, extension: str
+) -> None:
+    # https://github.com/stac-utils/pystac/issues/1817
+    validator = JsonSchemaSTACValidator(
+        allowed_extension_hosts=["stac-extensions.github.io"]
+    )
+    item.stac_extensions = [extension]
+    with pytest.raises(pystac.errors.STACValidationError, match="not on an allowed"):
+        item.validate(validator=validator)
+
+
+def _serve_schema(monkeypatch: pytest.MonkeyPatch, uri: str) -> list[str]:
+    fetched: list[str] = []
+
+    def read_text(self: Any, source: Any, *args: Any, **kwargs: Any) -> str:
+        assert str(source) == uri
+        fetched.append(uri)
+        return json.dumps(
+            {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "$id": uri,
+                "type": "object",
+            }
+        )
+
+    monkeypatch.setattr(pystac.stac_io.DefaultStacIO, "read_text", read_text)
+    return fetched
+
+
+def test_allowed_extension_hosts_loads_from_allowed_host(
+    monkeypatch: pytest.MonkeyPatch, item: pystac.Item
+) -> None:
+    uri = "https://Stac-Extensions.github.io/fake/v1.0.0/schema.json"
+    fetched = _serve_schema(monkeypatch, uri)
+    validator = JsonSchemaSTACValidator(
+        allowed_extension_hosts=["STAC-EXTENSIONS.GITHUB.IO"]
+    )
+    item.stac_extensions = [uri]
+    assert uri in item.validate(validator=validator)
+    assert fetched == [uri]
+
+
+def test_allowed_extension_hosts_defaults_to_allowing_any_host(
+    monkeypatch: pytest.MonkeyPatch, item: pystac.Item
+) -> None:
+    uri = "https://pystac-extensions.test/schema.json"
+    fetched = _serve_schema(monkeypatch, uri)
+    item.stac_extensions = [uri]
+    assert uri in item.validate(validator=JsonSchemaSTACValidator())
+    assert fetched == [uri]
+
+
 def test_404_schema_url(requests_mock: Mocker, item: pystac.Item) -> None:
     requests_mock.get(
         "http://pystac-extensions.test/a-fake-schema.json", status_code=404
