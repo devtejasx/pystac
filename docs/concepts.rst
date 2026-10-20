@@ -508,30 +508,71 @@ or Azure Blob Storage using the `Azure SDK for Python
          # set BlobStacIO as default StacIO
          StacIO.set_default(BlobStacIO)
 
-If you only need to customize read operations you can inherit from
-:class:`~pystac.stac_io.DefaultStacIO` and only overwrite the read method. For example,
-to take advantage of connection pooling using a `requests.Session
-<https://requests.kennethreitz.org/en/master>`__:
+Reading from servers that need authentication
+---------------------------------------------
+
+:class:`~pystac.stac_io.DefaultStacIO` sends the ``headers`` it was created with on
+every HTTP request it makes, so a token-based login needs no subclass. Pass the
+instance to the call that reads the root object; the objects read through it (for
+example the children and items of a catalog) keep using it:
 
 .. code-block:: python
 
-   from urllib.parse import urlparse
-   import requests
+   import pystac
+   from pystac.stac_io import DefaultStacIO
+
+   stac_io = DefaultStacIO(headers={"Authorization": "Bearer my-token"})
+   catalog = pystac.Catalog.from_file(
+       "https://example.com/stac/catalog.json", stac_io=stac_io
+   )
+
+To use these headers everywhere, including objects read without an explicit
+``stac_io``, make a subclass the default instead:
+
+.. code-block:: python
+
+   from typing import Any
+
    from pystac.stac_io import DefaultStacIO, StacIO
-   from typing import Union, Any
+
+   class AuthenticatedStacIO(DefaultStacIO):
+       def __init__(self, *args: Any, **kwargs: Any) -> None:
+           super().__init__(headers={"Authorization": "Bearer my-token"})
+
+   StacIO.set_default(AuthenticatedStacIO)
+
+Keep tokens out of source code, for example by reading them from an environment
+variable.
+
+Reusing connections
+-------------------
+
+If you only need to customize read operations you can inherit from
+:class:`~pystac.stac_io.DefaultStacIO` and only overwrite the read method. For example,
+to take advantage of connection pooling using a `requests.Session
+<https://requests.readthedocs.io/>`__:
+
+.. code-block:: python
+
+   from typing import Any
+   from urllib.parse import urlparse
+
+   import requests
+   from pystac import Link
+   from pystac.stac_io import DefaultStacIO, StacIO
 
    class ConnectionPoolingIO(DefaultStacIO):
-      def __init__(self):
-         self.session = requests.Session()
+       def __init__(self, *args: Any, **kwargs: Any) -> None:
+           super().__init__(*args, **kwargs)
+           self.session = requests.Session()
 
-      def read_text(
-         self, source: Union[str, Link], *args: Any, **kwargs: Any
-      ) -> str:
-         parsed = urlparse(uri)
-         if parsed.scheme.startswith("http"):
-            return self.session.get(uri).text
-         else:
-            return super().read_text(source, *args, **kwargs)
+       def read_text(self, source: str | Link, *args: Any, **kwargs: Any) -> str:
+           href = source.absolute_href if isinstance(source, Link) else str(source)
+           if urlparse(href).scheme.startswith("http"):
+               response = self.session.get(href, headers=self.headers)
+               response.raise_for_status()
+               return response.text
+           return super().read_text(source, *args, **kwargs)
 
    StacIO.set_default(ConnectionPoolingIO)
 
