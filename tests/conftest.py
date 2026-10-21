@@ -2,7 +2,6 @@
 
 import json
 import shutil
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -70,9 +69,11 @@ def sample_items(sample_item_collection: ItemCollection) -> list[Item]:
 
 @pytest.fixture(scope="function")
 def tmp_asset(tmp_path: Path) -> Asset:
-    """Copy the entirety of test-case-2 to tmp and"""
+    """Copy the entirety of test-case-2 to tmp and return the first item asset"""
     src = get_data_file("catalogs/test-case-2")
-    dst = str(tmp_path / str(uuid.uuid4()))
+    # tmp_path is already unique. Nesting another uuid directory in it pushed
+    # the deepest copied file past the 260 character path limit on Windows.
+    dst = str(tmp_path / "test-case-2")
     shutil.copytree(src, dst)
 
     catalog = Catalog.from_file(f"{dst}/catalog.json")
