@@ -205,6 +205,13 @@ def _make_relative_href_url(
     if rel_url != "./" and not rel_url.startswith("../"):
         rel_url = "./" + rel_url
 
+    # Keep the query and fragment of the source, e.g. the signature of a
+    # signed URL, which make_absolute_href carries over in the other direction
+    if parsed_source.query:
+        rel_url += "?" + parsed_source.query
+    if parsed_source.fragment:
+        rel_url += "#" + parsed_source.fragment
+
     return rel_url
 
 

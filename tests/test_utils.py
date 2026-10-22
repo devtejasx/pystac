@@ -73,6 +73,16 @@ from tests.utils import TestCases, path_includes_drive_letter
             "http://stacspec.org/a/b/catalog.json",
             "./.dotfile",
         ),
+        (
+            "https://stacspec.org/a/b/c/d/item.json?sig=abc&se=2026",
+            "https://stacspec.org/a/b/c/catalog.json?sig=xyz",
+            "./d/item.json?sig=abc&se=2026",
+        ),
+        (
+            "https://stacspec.org/a/data.tif#band1",
+            "https://stacspec.org/a/b/catalog.json",
+            "../data.tif#band1",
+        ),
         # relative href under windows
         (
             "C:\\a\\b\\c\\d\\catalog.json",
