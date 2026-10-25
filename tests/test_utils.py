@@ -2,6 +2,7 @@ import json
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 import pytest
 from dateutil import tz
@@ -344,6 +345,38 @@ def test_geojson_bbox() -> None:
         for geom in geom_dicts:
             got = utils.geometry_to_bbox(geom)
             assert got is not None
+
+
+@pytest.mark.parametrize(
+    "geometry,expected",
+    [
+        ({"type": "Point", "coordinates": [1, 2]}, [1, 2, 1, 2]),
+        ({"type": "Point", "coordinates": [1.5, 2.5, 30.0]}, [1.5, 2.5, 1.5, 2.5]),
+        (
+            {"type": "LineString", "coordinates": [[-5, -3, 1], [-1, -2, 2]]},
+            [-5, -3, -1, -2],
+        ),
+        (
+            {
+                "type": "Polygon",
+                "coordinates": [[[0, 0], [2, 0], [2, 1], [0, 0]]],
+            },
+            [0, 0, 2, 1],
+        ),
+        (
+            {
+                "type": "GeometryCollection",
+                "geometries": [
+                    {"type": "Point", "coordinates": [1, 2]},
+                    {"type": "LineString", "coordinates": [[3, -4], [5, 6]]},
+                ],
+            },
+            [1, -4, 5, 6],
+        ),
+    ],
+)
+def test_geometry_to_bbox(geometry: dict[str, Any], expected: list[float]) -> None:
+    assert utils.geometry_to_bbox(geometry) == expected
 
 
 @pytest.mark.parametrize(

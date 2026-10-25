@@ -468,39 +468,29 @@ def geometry_to_bbox(geometry: dict[str, Any]) -> list[float]:
         list: Bounding box of geojson geometry, formatted according to:
         https://tools.ietf.org/html/rfc7946#section-5
     """
-    coords = geometry["coordinates"]
+    xs: list[float] = []
+    ys: list[float] = []
 
-    lats: list[float] = []
-    lons: list[float] = []
-
-    def extract_coords(coords: list[list[float] | list[list[Any]]]) -> None:
+    def extract_coords(coords: list[Any]) -> None:
+        # A position is a list of numbers; anything else nests positions.
+        # Elevations are ignored, so the bbox is always 2D.
+        if coords and isinstance(coords[0], (int, float)):
+            xs.append(coords[0])
+            ys.append(coords[1])
+            return
         for x in coords:
-            # This handles points
-            if isinstance(x, float):
-                assert isinstance(coords[0], float), (
-                    f"Type mismatch: {coords[0]} is not a float"
-                )
-                assert isinstance(coords[1], float), (
-                    f"Type mismatch: {coords[1]} is not a float"
-                )
-                lats.append(coords[0])
-                lons.append(coords[1])
-                return
-            if isinstance(x[0], list):
-                extract_coords(x)
-            else:
-                lat, lon = x
-                lats.append(lat)
-                lons.append(lon)
+            extract_coords(x)
 
-    extract_coords(coords)
+    def extract_geometry(geometry: dict[str, Any]) -> None:
+        if geometry["type"] == "GeometryCollection":
+            for member in geometry["geometries"]:
+                extract_geometry(member)
+        else:
+            extract_coords(geometry["coordinates"])
 
-    lons.sort()
-    lats.sort()
+    extract_geometry(geometry)
 
-    bbox = [lats[0], lons[0], lats[-1], lons[-1]]
-
-    return bbox
+    return [min(xs), min(ys), max(xs), max(ys)]
 
 
 T = TypeVar("T")
